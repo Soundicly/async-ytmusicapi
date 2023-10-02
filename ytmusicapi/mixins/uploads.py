@@ -1,4 +1,4 @@
-import requests
+import aiohttp
 import ntpath
 import os
 from typing import List, Dict, Union
@@ -13,7 +13,7 @@ from ytmusicapi.parsers.uploads import parse_uploaded_items
 
 
 class UploadsMixin:
-    def get_library_upload_songs(self, limit: int = 25, order: str = None) -> List[Dict]:
+    async def get_library_upload_songs(self, limit: int = 25, order: str = None) -> List[Dict]:
         """
         Returns a list of uploaded songs
 
@@ -42,7 +42,7 @@ class UploadsMixin:
         validate_order_parameter(order)
         if order is not None:
             body["params"] = prepare_order_params(order)
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         results = get_library_contents(response, MUSIC_SHELF)
         if results is None:
             return []
@@ -53,12 +53,12 @@ class UploadsMixin:
                 endpoint, body, additionalParams)
             remaining_limit = None if limit is None else (limit - len(songs))
             songs.extend(
-                get_continuations(results, 'musicShelfContinuation', remaining_limit, request_func,
+                await get_continuations(results, 'musicShelfContinuation', remaining_limit, request_func,
                                   parse_uploaded_items))
 
         return songs
 
-    def get_library_upload_albums(self, limit: int = 25, order: str = None) -> List[Dict]:
+    async def get_library_upload_albums(self, limit: int = 25, order: str = None) -> List[Dict]:
         """
         Gets the albums of uploaded songs in the user's library.
 
@@ -72,12 +72,12 @@ class UploadsMixin:
         if order is not None:
             body["params"] = prepare_order_params(order)
         endpoint = 'browse'
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         return parse_library_albums(
             response,
             lambda additionalParams: self._send_request(endpoint, body, additionalParams), limit)
 
-    def get_library_upload_artists(self, limit: int = 25, order: str = None) -> List[Dict]:
+    async def get_library_upload_artists(self, limit: int = 25, order: str = None) -> List[Dict]:
         """
         Gets the artists of uploaded songs in the user's library.
 
@@ -91,12 +91,12 @@ class UploadsMixin:
         if order is not None:
             body["params"] = prepare_order_params(order)
         endpoint = 'browse'
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         return parse_library_artists(
             response,
             lambda additionalParams: self._send_request(endpoint, body, additionalParams), limit)
 
-    def get_library_upload_artist(self, browseId: str, limit: int = 25) -> List[Dict]:
+    async def get_library_upload_artist(self, browseId: str, limit: int = 25) -> List[Dict]:
         """
         Returns a list of uploaded tracks for the artist.
 
@@ -126,7 +126,7 @@ class UploadsMixin:
         self._check_auth()
         body = {'browseId': browseId}
         endpoint = 'browse'
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM + MUSIC_SHELF)
         if len(results['contents']) > 1:
             results['contents'].pop(0)
@@ -139,12 +139,12 @@ class UploadsMixin:
             parse_func = lambda contents: parse_uploaded_items(contents)
             remaining_limit = None if limit is None else (limit - len(items))
             items.extend(
-                get_continuations(results, 'musicShelfContinuation', remaining_limit, request_func,
+                await get_continuations(results, 'musicShelfContinuation', remaining_limit, request_func,
                                   parse_func))
 
         return items
 
-    def get_library_upload_album(self, browseId: str) -> Dict:
+    async def get_library_upload_album(self, browseId: str) -> Dict:
         """
         Get information and tracks of an album associated with uploaded tracks
 
@@ -179,14 +179,14 @@ class UploadsMixin:
         self._check_auth()
         body = {'browseId': browseId}
         endpoint = 'browse'
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         album = parse_album_header(response)
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM + MUSIC_SHELF)
         album['tracks'] = parse_uploaded_items(results['contents'])
         album['duration_seconds'] = sum_total_duration(album)
         return album
 
-    def upload_song(self, filepath: str) -> Union[str, requests.Response]:
+    async def upload_song(self, filepath: str) -> Union[str, requests.Response]:
         """
         Uploads a song to YouTube Music
 
@@ -215,19 +215,27 @@ class UploadsMixin:
         headers['X-Goog-Upload-Command'] = 'start'
         headers['X-Goog-Upload-Header-Content-Length'] = str(filesize)
         headers['X-Goog-Upload-Protocol'] = 'resumable'
-        response = requests.post(upload_url, data=body, headers=headers, proxies=self.proxies)
-        headers['X-Goog-Upload-Command'] = 'upload, finalize'
-        headers['X-Goog-Upload-Offset'] = '0'
-        upload_url = response.headers['X-Goog-Upload-URL']
-        with open(filepath, 'rb') as file:
-            response = requests.post(upload_url, data=file, headers=headers, proxies=self.proxies)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                upload_url,
+                data=body,
+                headers=headers,
+                proxies=self.proxies,
+            ) as response:
+                headers['X-Goog-Upload-Command'] = 'upload, finalize'
+                headers['X-Goog-Upload-Offset'] = '0'
+                
+                upload_url = response.headers['X-Goog-Upload-URL']
+            with open(filepath, 'rb') as file:
+                async with session.post(
+                    upload_url, data=file, headers=headers, proxies=self.proxies
+                ) as response:
+                    if response.status_code == 200:
+                        return 'STATUS_SUCCEEDED'
+                    else:
+                        return response
 
-        if response.status_code == 200:
-            return 'STATUS_SUCCEEDED'
-        else:
-            return response
-
-    def delete_upload_entity(self, entityId: str) -> Union[str, Dict]:  # pragma: no cover
+    async def delete_upload_entity(self, entityId: str) -> Union[str, Dict]:  # pragma: no cover
         """
         Deletes a previously uploaded song or album
 
@@ -241,7 +249,7 @@ class UploadsMixin:
             entityId = entityId.replace('FEmusic_library_privately_owned_release_detail', '')
 
         body = {"entityId": entityId}
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
 
         if 'error' not in response:
             return 'STATUS_SUCCEEDED'

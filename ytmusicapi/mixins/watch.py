@@ -6,7 +6,7 @@ from ytmusicapi.parsers.watch import *
 
 
 class WatchMixin:
-    def get_watch_playlist(self,
+    async def get_watch_playlist(self,
                            videoId: str = None,
                            playlistId: str = None,
                            limit=25,
@@ -126,7 +126,7 @@ class WatchMixin:
         if radio:
             body['params'] = "wAEB"
         endpoint = 'next'
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         watchNextRenderer = nav(response, [
             'contents', 'singleColumnMusicWatchNextResultsRenderer', 'tabbedRenderer',
             'watchNextTabbedResultsRenderer'
@@ -150,7 +150,7 @@ class WatchMixin:
                 endpoint, body, additionalParams)
             parse_func = lambda contents: parse_watch_playlist(contents)
             tracks.extend(
-                get_continuations(results, 'playlistPanelContinuation', limit - len(tracks),
+                await get_continuations(results, 'playlistPanelContinuation', limit - len(tracks),
                                   request_func, parse_func, '' if is_playlist else 'Radio'))
 
         return dict(tracks=tracks,

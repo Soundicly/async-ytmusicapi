@@ -10,7 +10,7 @@ from ytmusicapi.parsers.browsing import parse_content_list, parse_playlist
 
 class PlaylistsMixin:
 
-    def get_playlist(self,
+    async def get_playlist(self,
                      playlistId: str,
                      limit: int = 100,
                      related: bool = False,
@@ -106,7 +106,7 @@ class PlaylistsMixin:
         browseId = "VL" + playlistId if not playlistId.startswith("VL") else playlistId
         body = {'browseId': browseId}
         endpoint = 'browse'
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         results = nav(response,
                       SINGLE_COLUMN_TAB + SECTION_LIST_ITEM + ['musicPlaylistShelfRenderer'])
         playlist = {'id': results['playlistId']}
@@ -164,7 +164,7 @@ class PlaylistsMixin:
 
                 parse_func = lambda results: parse_playlist_items(results)
                 playlist['suggestions'].extend(
-                    get_continuations(suggestions_shelf,
+                    await get_continuations(suggestions_shelf,
                                       'musicShelfContinuation',
                                       suggestions_limit - len(playlist['suggestions']),
                                       request_func,
@@ -192,7 +192,7 @@ class PlaylistsMixin:
         playlist['duration_seconds'] = sum_total_duration(playlist)
         return playlist
 
-    def create_playlist(self,
+    async def create_playlist(self,
                         title: str,
                         description: str,
                         privacy_status: str = "PRIVATE",
@@ -224,7 +224,7 @@ class PlaylistsMixin:
         response = self._send_request(endpoint, body)
         return response['playlistId'] if 'playlistId' in response else response
 
-    def edit_playlist(self,
+    async def edit_playlist(self,
                       playlistId: str,
                       title: str = None,
                       description: str = None,
@@ -276,7 +276,7 @@ class PlaylistsMixin:
         response = self._send_request(endpoint, body)
         return response['status'] if 'status' in response else response
 
-    def delete_playlist(self, playlistId: str) -> Union[str, Dict]:
+    async def delete_playlist(self, playlistId: str) -> Union[str, Dict]:
         """
         Delete a playlist.
 
@@ -286,10 +286,10 @@ class PlaylistsMixin:
         self._check_auth()
         body = {'playlistId': validate_playlist_id(playlistId)}
         endpoint = 'playlist/delete'
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         return response['status'] if 'status' in response else response
 
-    def add_playlist_items(self,
+    async def add_playlist_items(self,
                            playlistId: str,
                            videoIds: List[str] = None,
                            source_playlist: str = None,
@@ -328,7 +328,7 @@ class PlaylistsMixin:
                 body['actions'].append({'action': 'ACTION_ADD_VIDEO', 'addedVideoId': None})
 
         endpoint = 'browse/edit_playlist'
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         if 'status' in response and 'SUCCEEDED' in response['status']:
             result_dict = [
                 result_data.get("playlistEditVideoAddedResultData")
@@ -338,7 +338,7 @@ class PlaylistsMixin:
         else:
             return response
 
-    def remove_playlist_items(self, playlistId: str, videos: List[Dict]) -> Union[str, Dict]:
+    async def remove_playlist_items(self, playlistId: str, videos: List[Dict]) -> Union[str, Dict]:
         """
         Remove songs from an existing playlist
 
@@ -362,5 +362,5 @@ class PlaylistsMixin:
             })
 
         endpoint = 'browse/edit_playlist'
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         return response['status'] if 'status' in response else response

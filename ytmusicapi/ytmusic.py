@@ -1,6 +1,8 @@
-import requests
 import gettext
 import os
+import asyncio
+import orjson
+import aiohttp
 from functools import partial
 from contextlib import suppress
 from typing import Dict
@@ -30,7 +32,7 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
     def __init__(self,
                  auth: str = None,
                  user: str = None,
-                 requests_session=True,
+                 client_session=True,
                  proxies: dict = None,
                  language: str = 'en',
                  location: str = ''):
@@ -70,17 +72,15 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
             Available languages can be checked in the FAQ.
         """
         self.auth = auth
+        self._loop = asyncio.get_running_loop()
         self.input_dict = None
         self.is_oauth_auth = False
 
-        if isinstance(requests_session, requests.Session):
-            self._session = requests_session
+        if isinstance(client_session, aiohttp.ClientSession):
+            self._session = client_session
         else:
-            if requests_session:  # Build a new session.
-                self._session = requests.Session()
-                self._session.request = partial(self._session.request, timeout=30)
-            else:  # Use the Requests API module as a "session".
-                self._session = requests.api
+            self._session = aiohttp.ClientSession(json_serialize=orjson.dumps)
+            self._session.request = partial(self._session.request, timeout=30)
 
         self.proxies = proxies
         self.cookies = {'CONSENT': 'YES+1'}
@@ -93,7 +93,7 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
         self.headers = prepare_headers(self._session, proxies, self.input_dict)
 
         if 'x-goog-visitor-id' not in self.headers:
-            self.headers.update(get_visitor_id(self._send_get_request))
+            asyncio.create_task(self._update_headers())
 
         # prepare context
         self.context = initialize_context()
@@ -132,7 +132,7 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
 
 
 
-    def _send_request(self, endpoint: str, body: Dict, additionalParams: str = "") -> Dict:
+    async def _send_request(self, endpoint: str, body: Dict, additionalParams: str = "") -> Dict:
 
         if self.is_oauth_auth:
             self.headers = prepare_headers(self._session, self.proxies, self.input_dict) 
@@ -143,26 +143,33 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
             self.headers["authorization"] = get_authorization(self.sapisid + ' ' + origin)
             params += YTM_PARAMS_KEY
 
-        response = self._session.post(YTM_BASE_API + endpoint + params + additionalParams,
-                                      json=body,
-                                      headers=self.headers,
-                                      proxies=self.proxies,
-                                      cookies=self.cookies)
-        response_text = json.loads(response.text)
-        if response.status_code >= 400:
-            message = "Server returned HTTP " + str(
-                response.status_code) + ": " + response.reason + ".\n"
-            error = response_text.get('error', {}).get('message')
-            raise Exception(message + error)
-        return response_text
+        async with self._session.post(
+            YTM_BASE_API + endpoint + params + additionalParams,
+            json=body,
+            headers=self.headers,
+            proxies=self.proxies,
+            cookies=self.cookies
+        ) as response:
+            response_text = orjson.loads(response.text)
+            if response.status >= 400:
+                message = "Server returned HTTP " + str(
+                    response.status) + ": " + response.reason + ".\n"
+                error = response_text.get('error', {}).get('message')
+                raise Exception(message + error)
+            return response_text
 
-    def _send_get_request(self, url: str, params: Dict = None):
-        response = self._session.get(url,
-                                     params=params,
-                                     headers=self.headers,
-                                     proxies=self.proxies,
-                                     cookies=self.cookies)
-        return response
+    async def _update_headers(self):
+        self.headers.update(await get_visitor_id(self._send_get_request))
+
+    async def _send_get_request(self, url: str, params: Dict = None):
+        async with self._session.get(
+            url,
+            params=params,
+            headers=self.headers,
+            proxies=self.proxies,
+            cookies=self.cookies
+        ) as response:
+            return await response.text()
 
     def _check_auth(self):
         if not self.auth:

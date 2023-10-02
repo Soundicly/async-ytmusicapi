@@ -1,5 +1,5 @@
 import re
-import json
+import orjson
 from http.cookies import SimpleCookie
 from hashlib import sha1
 import time
@@ -24,21 +24,18 @@ def initialize_headers():
 def initialize_context():
     return {
         'context': {
-            'client': {
-                'clientName': 'WEB_REMIX',
-                'clientVersion': '1.' + time.strftime("%Y%m%d", time.gmtime()) + '.01.00'
-            },
-            'user': {}
+            "client": {"clientName": "WEB_REMIX", "clientVersion": "0.1"},
+            "user": {},
         }
     }
 
 
-def get_visitor_id(request_func):
-    response = request_func(YTM_DOMAIN)
+async def get_visitor_id(request_func):
+    response = await request_func(YTM_DOMAIN)
     matches = re.findall(r'ytcfg\.set\s*\(\s*({.+?})\s*\)\s*;', response.text)
     visitor_id = ""
     if len(matches) > 0:
-        ytcfg = json.loads(matches[0])
+        ytcfg = orjson.loads(matches[0])
         visitor_id = ytcfg.get('VISITOR_DATA')
     return {'X-Goog-Visitor-Id': visitor_id}
 

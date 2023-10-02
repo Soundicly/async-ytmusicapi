@@ -5,7 +5,7 @@ from ytmusicapi.parsers.search import *
 
 class SearchMixin:
 
-    def search(self,
+    async def search(self,
                query: str,
                filter: str = None,
                scope: str = None,
@@ -162,7 +162,7 @@ class SearchMixin:
         if params:
             body['params'] = params
 
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
 
         # no results
         if 'contents' not in response:
@@ -226,12 +226,12 @@ class SearchMixin:
                     return parse_search_results(contents, search_result_types, type, category)
 
                 search_results.extend(
-                    get_continuations(res['musicShelfRenderer'], 'musicShelfContinuation',
+                    await get_continuations(res['musicShelfRenderer'], 'musicShelfContinuation',
                                       limit - len(search_results), request_func, parse_func))
 
         return search_results
 
-    def get_search_suggestions(self,
+    async def get_search_suggestions(self,
                                query: str,
                                detailed_runs=False) -> Union[List[str], List[Dict]]:
         """
@@ -303,7 +303,7 @@ class SearchMixin:
         body = {'input': query}
         endpoint = 'music/get_search_suggestions'
 
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         search_suggestions = parse_search_suggestions(response, detailed_runs)
 
         return search_suggestions

@@ -4,7 +4,7 @@ from typing import List, Dict
 
 class ExploreMixin:
 
-    def get_mood_categories(self) -> Dict:
+    async def get_mood_categories(self) -> Dict:
         """
         Fetch "Moods & Genres" categories from YouTube Music.
 
@@ -50,7 +50,7 @@ class ExploreMixin:
 
         """
         sections = {}
-        response = self._send_request('browse', {'browseId': 'FEmusic_moods_and_genres'})
+        response = await self._send_request('browse', {'browseId': 'FEmusic_moods_and_genres'})
         for section in nav(response, SINGLE_COLUMN_TAB + SECTION_LIST):
             title = nav(section, GRID + ['header', 'gridHeaderRenderer'] + TITLE_TEXT)
             sections[title] = []
@@ -62,7 +62,7 @@ class ExploreMixin:
 
         return sections
 
-    def get_mood_playlists(self, params: str) -> List[Dict]:
+    async def get_mood_playlists(self, params: str) -> List[Dict]:
         """
         Retrieve a list of playlists for a given "Moods & Genres" category.
 
@@ -71,7 +71,7 @@ class ExploreMixin:
 
         """
         playlists = []
-        response = self._send_request('browse', {
+        response = await self._send_request('browse', {
             'browseId': 'FEmusic_moods_and_genres_category',
             'params': params
         })
@@ -89,7 +89,7 @@ class ExploreMixin:
 
         return playlists
 
-    def get_charts(self, country: str = 'ZZ') -> Dict:
+    async def get_charts(self, country: str = 'ZZ') -> Dict:
         """
         Get latest charts data from YouTube Music: Top songs, top videos, top artists and top trending videos.
         Global charts have no Trending section, US charts have an extra Genres section with some Genre charts.
@@ -193,7 +193,7 @@ class ExploreMixin:
         if country:
             body['formData'] = {'selectedValues': [country]}
         endpoint = 'browse'
-        response = self._send_request(endpoint, body)
+        response = await self._send_request(endpoint, body)
         results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST)
         charts = {'countries': {}}
         menu = nav(

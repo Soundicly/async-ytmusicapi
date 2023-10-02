@@ -1,7 +1,7 @@
 from ytmusicapi.navigation import nav
 
 
-def get_continuations(results,
+async def get_continuations(results,
                       continuation_type,
                       limit,
                       request_func,
@@ -12,12 +12,12 @@ def get_continuations(results,
     while 'continuations' in results and (limit is None or len(items) < limit):
         additionalParams = get_reloadable_continuation_params(results) if reloadable \
             else get_continuation_params(results, ctoken_path)
-        response = request_func(additionalParams)
+        response = await request_func(additionalParams)
         if 'continuationContents' in response:
             results = response['continuationContents'][continuation_type]
         else:
             break
-        contents = get_continuation_contents(results, parse_func)
+        contents = await get_continuation_contents(results, parse_func)
         if len(contents) == 0:
             break
         items.extend(contents)
@@ -25,7 +25,7 @@ def get_continuations(results,
     return items
 
 
-def get_validated_continuations(results,
+async def get_validated_continuations(results,
                                 continuation_type,
                                 limit,
                                 per_page,
@@ -39,7 +39,7 @@ def get_validated_continuations(results,
             raw_response, parse_func, continuation_type)
         validate_func = lambda parsed: validate_response(parsed, per_page, limit, len(items))
 
-        response = resend_request_until_parsed_response_is_valid(request_func, additionalParams,
+        response = await resend_request_until_parsed_response_is_valid(request_func, additionalParams,
                                                                  wrapped_parse_func, validate_func,
                                                                  3)
         results = response['results']
@@ -48,7 +48,7 @@ def get_validated_continuations(results,
     return items
 
 
-def get_parsed_continuation_items(response, parse_func, continuation_type):
+async def get_parsed_continuation_items(response, parse_func, continuation_type):
     results = response['continuationContents'][continuation_type]
     return {'results': results, 'parsed': get_continuation_contents(results, parse_func)}
 
@@ -68,7 +68,7 @@ def get_continuation_string(ctoken):
     return "&ctoken=" + ctoken + "&continuation=" + ctoken
 
 
-def get_continuation_contents(continuation, parse_func):
+async def get_continuation_contents(continuation, parse_func):
     for term in ['contents', 'items']:
         if term in continuation:
             return parse_func(continuation[term])
@@ -76,14 +76,14 @@ def get_continuation_contents(continuation, parse_func):
     return []
 
 
-def resend_request_until_parsed_response_is_valid(request_func, request_additional_params,
+async def resend_request_until_parsed_response_is_valid(request_func, request_additional_params,
                                                   parse_func, validate_func, max_retries):
-    response = request_func(request_additional_params)
-    parsed_object = parse_func(response)
+    response = await request_func(request_additional_params)
+    parsed_object = await parse_func(response)
     retry_counter = 0
     while not validate_func(parsed_object) and retry_counter < max_retries:
-        response = request_func(request_additional_params)
-        attempt = parse_func(response)
+        response = await request_func(request_additional_params)
+        attempt = await parse_func(response)
         if len(attempt['parsed']) > len(parsed_object['parsed']):
             parsed_object = attempt
         retry_counter += 1
