@@ -186,7 +186,7 @@ class UploadsMixin:
         album['duration_seconds'] = sum_total_duration(album)
         return album
 
-    async def upload_song(self, filepath: str) -> Union[str, requests.Response]:
+    async def upload_song(self, filepath: str) -> Union[str, aiohttp.ClientResponse]:
         """
         Uploads a song to YouTube Music
 
