@@ -82,7 +82,9 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
             self._session.request = partial(self._session.request, timeout=30)
 
         self.proxy = proxy
-        self.cookies = {'CONSENT': 'YES+1'}
+        # see google cookie docs: https://policies.google.com/technologies/cookies
+        # value from https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/youtube.py#L502
+        self.cookies = {'SOCS': 'CAI'}
         if self.auth is not None:
             input_json = load_headers_file(self.auth)
             self.input_dict = CaseInsensitiveDict(input_json)
