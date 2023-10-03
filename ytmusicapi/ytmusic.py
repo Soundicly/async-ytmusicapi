@@ -7,7 +7,7 @@ from functools import partial
 from contextlib import suppress
 from typing import Dict
 
-from requests.structures import CaseInsensitiveDict
+from case_insensitive_dict import CaseInsensitiveDict
 from ytmusicapi.auth.headers import load_headers_file, prepare_headers
 from ytmusicapi.parsers.i18n import Parser
 from ytmusicapi.helpers import *

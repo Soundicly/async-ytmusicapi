@@ -3,7 +3,7 @@ import os
 from typing import Dict, Optional
 
 import aiohttp
-from requests.structures import CaseInsensitiveDict
+from case_insensitive_dict import CaseInsensitiveDict
 
 from ytmusicapi.auth.browser import is_browser
 from ytmusicapi.auth.oauth import YTMusicOAuth, is_oauth, is_custom_oauth

@@ -4,7 +4,7 @@ import webbrowser
 from typing import Dict, Optional
 
 import aiohttp
-from requests.structures import CaseInsensitiveDict
+from case_insensitive_dict import CaseInsensitiveDict
 
 from ytmusicapi.constants import (OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, OAUTH_CODE_URL,
                                   OAUTH_SCOPE, OAUTH_TOKEN_URL, OAUTH_USER_AGENT)

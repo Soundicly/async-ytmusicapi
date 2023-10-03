@@ -1,7 +1,7 @@
 import os
 import platform
 
-from requests.structures import CaseInsensitiveDict
+from case_insensitive_dict import CaseInsensitiveDict
 
 from ytmusicapi.helpers import *
 
