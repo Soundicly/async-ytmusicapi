@@ -2,7 +2,7 @@ import orjson
 import os
 from typing import Dict, Optional
 
-import requests
+import aiohttp
 from requests.structures import CaseInsensitiveDict
 
 from ytmusicapi.auth.browser import is_browser
@@ -21,7 +21,7 @@ def load_headers_file(auth: str) -> Dict:
 
 
 async def prepare_headers(
-    session: requests.Session,
+    session: aiohttp.ClientSession,
     proxy: Optional[str] = None,
     input_dict: Optional[CaseInsensitiveDict] = None,
 ) -> Dict:
