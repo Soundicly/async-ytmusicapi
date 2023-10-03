@@ -1,9 +1,9 @@
 import argparse
+import asyncio
+import aiohttp
 import sys
 from pathlib import Path
 from typing import Dict
-
-import requests
 
 from ytmusicapi.auth.browser import setup_browser
 from ytmusicapi.auth.oauth import YTMusicOAuth
@@ -22,24 +22,24 @@ def setup(filepath: str = None, headers_raw: str = None) -> Dict:
     return setup_browser(filepath, headers_raw)
 
 
-def setup_oauth(filepath: str = None,
-                session: requests.Session = None,
-                proxies: dict = None,
+async def setup_oauth(filepath: str = None,
+                session: aiohttp.ClientSession = None,
+                proxy: str = None,
                 open_browser: bool = False) -> Dict:
     """
     Starts oauth flow from the terminal
     and returns a string that can be passed to YTMusic()
 
     :param session: Session to use for authentication
-    :param proxies: Proxies to use for authentication
+    :param proxy: Proxy to use for authentication
     :param filepath: Optional filepath to store headers to.
     :param open_browser: If True, open the default browser with the setup link
     :return: configuration headers string
     """
     if not session:
-        session = requests.Session()
+        session = aiohttp.ClientSession()
 
-    return YTMusicOAuth(session, proxies).setup(filepath, open_browser)
+    return await YTMusicOAuth(session, proxy).setup(filepath, open_browser)
 
 
 def parse_args(args):
@@ -51,8 +51,7 @@ def parse_args(args):
     parser.add_argument("--file", type=Path, help="optional path to output file.")
     return parser.parse_args(args)
 
-
-def main():
+async def main_async():
     args = parse_args(sys.argv[1:])
     filename = args.file.as_posix() if args.file else f"{args.setup_type}.json"
     print(f"Creating {filename} with your authentication credentials...")
@@ -60,3 +59,6 @@ def main():
         return setup_oauth(filename, open_browser=True)
     else:
         return setup(filename)
+
+def main():
+    asyncio.get_event_loop().run_until_complete(main_async)

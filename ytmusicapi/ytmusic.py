@@ -33,7 +33,7 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
                  auth: str = None,
                  user: str = None,
                  client_session=True,
-                 proxies: dict = None,
+                 proxy: str = None,
                  language: str = 'en',
                  location: str = ''):
         """
@@ -59,7 +59,7 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
           A falsy value disables sessions.
           It is generally a good idea to keep sessions enabled for
           performance reasons (connection pooling).
-        :param proxies: Optional. Proxy configuration in requests_ format_.
+        :param proxy: Optional. Proxy configuration in requests_ format_.
 
             .. _requests: https://requests.readthedocs.io/
             .. _format: https://requests.readthedocs.io/en/master/user/advanced/#proxies
@@ -72,7 +72,6 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
             Available languages can be checked in the FAQ.
         """
         self.auth = auth
-        self._loop = asyncio.get_running_loop()
         self.input_dict = None
         self.is_oauth_auth = False
 
@@ -82,18 +81,37 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
             self._session = aiohttp.ClientSession(json_serialize=orjson.dumps)
             self._session.request = partial(self._session.request, timeout=30)
 
-        self.proxies = proxies
+        self.proxy = proxy
         self.cookies = {'CONSENT': 'YES+1'}
         if self.auth is not None:
             input_json = load_headers_file(self.auth)
             self.input_dict = CaseInsensitiveDict(input_json)
             self.input_dict['filepath'] = self.auth
             self.is_oauth_auth = is_oauth(self.input_dict)
+        
+        self.context = None
+        self.language = None
+        self.lang = None
+        self.parser = None
+        self.is_browser_auth = None
+        self.sapisid = None
 
-        self.headers = prepare_headers(self._session, proxies, self.input_dict)
-
+    @classmethod
+    async def create(
+                cls,
+                auth: str = None,
+                user: str = None,
+                client_session=True,
+                proxy: dict = None,
+                language: str = 'en',
+                location: str = ''
+        ):
+        self = YTMusic(auth, user, client_session, proxy, language, location)
+        
+        self.headers = await prepare_headers(self._session, proxy, self.input_dict)
+        
         if 'x-goog-visitor-id' not in self.headers:
-            asyncio.create_task(self._update_headers())
+            await self._update_headers()
 
         # prepare context
         self.context = initialize_context()
@@ -129,13 +147,14 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
                 self.sapisid = sapisid_from_cookie(cookie)
             except KeyError:
                 raise Exception("Your cookie is missing the required value __Secure-3PAPISID")
-
+        
+        return self
 
 
     async def _send_request(self, endpoint: str, body: Dict, additionalParams: str = "") -> Dict:
 
         if self.is_oauth_auth:
-            self.headers = prepare_headers(self._session, self.proxies, self.input_dict) 
+            self.headers = await prepare_headers(self._session, self.proxy, self.input_dict) 
         body.update(self.context)
         params = YTM_PARAMS
         if self.is_browser_auth:
@@ -147,10 +166,10 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
             YTM_BASE_API + endpoint + params + additionalParams,
             json=body,
             headers=self.headers,
-            proxies=self.proxies,
+            proxy=self.proxy,
             cookies=self.cookies
         ) as response:
-            response_text = orjson.loads(response.text)
+            response_text = orjson.loads(await response.text())
             if response.status >= 400:
                 message = "Server returned HTTP " + str(
                     response.status) + ": " + response.reason + ".\n"
@@ -166,7 +185,7 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
             url,
             params=params,
             headers=self.headers,
-            proxies=self.proxies,
+            proxy=self.proxy,
             cookies=self.cookies
         ) as response:
             return await response.text()

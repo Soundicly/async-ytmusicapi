@@ -59,7 +59,7 @@ def parse_albums(results):
     return albums
 
 
-def parse_library_artists(response, request_func, limit):
+async def parse_library_artists(response, request_func, limit):
     results = get_library_contents(response, MUSIC_SHELF)
     if results is None:
         return []
@@ -69,7 +69,7 @@ def parse_library_artists(response, request_func, limit):
         parse_func = lambda contents: parse_artists(contents)
         remaining_limit = None if limit is None else (limit - len(artists))
         artists.extend(
-            get_continuations(results, 'musicShelfContinuation', remaining_limit, request_func,
+            await get_continuations(results, 'musicShelfContinuation', remaining_limit, request_func,
                               parse_func))
 
     return artists

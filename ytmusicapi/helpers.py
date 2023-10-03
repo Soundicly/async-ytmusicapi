@@ -32,7 +32,7 @@ def initialize_context():
 
 async def get_visitor_id(request_func):
     response = await request_func(YTM_DOMAIN)
-    matches = re.findall(r'ytcfg\.set\s*\(\s*({.+?})\s*\)\s*;', response.text)
+    matches = re.findall(r'ytcfg\.set\s*\(\s*({.+?})\s*\)\s*;', response)
     visitor_id = ""
     if len(matches) > 0:
         ytcfg = orjson.loads(matches[0])

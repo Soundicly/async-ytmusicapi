@@ -341,7 +341,7 @@ class BrowsingMixin:
         """
         params = {"list": audioPlaylistId}
         response = await self._send_get_request(YTM_DOMAIN + "/playlist", params)
-        matches = re.findall(r"\"MPRE.+?\"", response.text)
+        matches = re.findall(r"\"MPRE.+?\"", await response.text())
         browse_id = None
         if len(matches) > 0:
             browse_id = matches[0].encode('utf8').decode('unicode-escape').strip('"')
@@ -731,7 +731,7 @@ class BrowsingMixin:
         :return: URL to `base.js`
         """
         response = await self._send_get_request(url=YTM_DOMAIN)
-        match = re.search(r'jsUrl"\s*:\s*"([^"]+)"', response.text)
+        match = re.search(r'jsUrl"\s*:\s*"([^"]+)"', await response.text())
         if match is None:
             raise Exception("Could not identify the URL for base.js player.")
 

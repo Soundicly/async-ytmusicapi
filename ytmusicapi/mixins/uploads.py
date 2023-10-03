@@ -92,7 +92,7 @@ class UploadsMixin:
             body["params"] = prepare_order_params(order)
         endpoint = 'browse'
         response = await self._send_request(endpoint, body)
-        return parse_library_artists(
+        return await parse_library_artists(
             response,
             lambda additionalParams: self._send_request(endpoint, body, additionalParams), limit)
 
@@ -220,7 +220,7 @@ class UploadsMixin:
                 upload_url,
                 data=body,
                 headers=headers,
-                proxies=self.proxies,
+                proxy=self.proxy,
             ) as response:
                 headers['X-Goog-Upload-Command'] = 'upload, finalize'
                 headers['X-Goog-Upload-Offset'] = '0'
@@ -228,7 +228,7 @@ class UploadsMixin:
                 upload_url = response.headers['X-Goog-Upload-URL']
             with open(filepath, 'rb') as file:
                 async with session.post(
-                    upload_url, data=file, headers=headers, proxies=self.proxies
+                    upload_url, data=file, headers=headers, proxy=self.proxy
                 ) as response:
                     if response.status_code == 200:
                         return 'STATUS_SUCCEEDED'

@@ -1,4 +1,4 @@
-import json
+import orjson
 import os
 from typing import Dict, Optional
 
@@ -13,23 +13,23 @@ from ytmusicapi.helpers import initialize_headers
 def load_headers_file(auth: str) -> Dict:
     if os.path.isfile(auth):
         with open(auth) as json_file:
-            input_json = json.load(json_file)
+            input_json = orjson.loads(json_file.read())
     else:
-        input_json = json.loads(auth)
+        input_json = orjson.loads(auth)
 
     return input_json
 
 
-def prepare_headers(
+async def prepare_headers(
     session: requests.Session,
-    proxies: Optional[Dict] = None,
+    proxy: Optional[str] = None,
     input_dict: Optional[CaseInsensitiveDict] = None,
 ) -> Dict:
     if input_dict:
 
         if is_oauth(input_dict):
-            oauth = YTMusicOAuth(session, proxies)
-            headers = oauth.load_headers(dict(input_dict), input_dict['filepath'])
+            oauth = YTMusicOAuth(session, proxy)
+            headers = await oauth.load_headers(dict(input_dict), input_dict['filepath'])
 
         elif is_browser(input_dict):
             headers = input_dict

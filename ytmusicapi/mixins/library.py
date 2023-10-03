@@ -180,7 +180,7 @@ class LibraryMixin:
             body["params"] = prepare_order_params(order)
         endpoint = 'browse'
         response = await self._send_request(endpoint, body)
-        return parse_library_artists(
+        return await parse_library_artists(
             response,
             lambda additionalParams: self._send_request(endpoint, body, additionalParams), limit)
 
