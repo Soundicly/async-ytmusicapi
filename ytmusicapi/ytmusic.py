@@ -78,6 +78,8 @@ class YTMusic(BrowsingMixin, SearchMixin, WatchMixin, ExploreMixin, LibraryMixin
         if isinstance(client_session, aiohttp.ClientSession):
             self._session = client_session
         else:
+            # Cannot use orjson since it returs bytes, not str
+            # self._session = aiohttp.ClientSession(json_serialize=orjson.dumps)
             self._session = aiohttp.ClientSession(json_serialize=orjson.dumps)
             self._session.request = partial(self._session.request, timeout=30)
 
