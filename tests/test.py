@@ -124,6 +124,12 @@ class TestYTMusic(unittest.TestCase):
         results = self.yt_auth.search("some user", filter="profiles")
         self.assertGreater(len(results), 10)
         self.assertTrue(all(item['resultType'] == 'profile' for item in results))
+        results = self.yt_auth.search(query, filter="podcasts")
+        self.assertGreater(len(results), 10)
+        self.assertTrue(all(item['resultType'] == 'podcast' for item in results))
+        results = self.yt_auth.search(query, filter="episodes")
+        self.assertGreater(len(results), 10)
+        self.assertTrue(all(item['resultType'] == 'episode' for item in results))
 
     def test_search_uploads(self):
         self.assertRaises(
@@ -393,10 +399,14 @@ class TestYTMusic(unittest.TestCase):
     def test_edit_song_library_status(self):
         album = self.yt_brand.get_album(sample_album)
         response = self.yt_brand.edit_song_library_status(
-            album["tracks"][2]["feedbackTokens"]["add"])
+            album["tracks"][0]["feedbackTokens"]["add"])
+        album = self.yt_brand.get_album(sample_album)
+        self.assertTrue(album["tracks"][0]["inLibrary"])
         self.assertTrue(response["feedbackResponses"][0]["isProcessed"])
         response = self.yt_brand.edit_song_library_status(
-            album["tracks"][2]["feedbackTokens"]["remove"])
+            album["tracks"][0]["feedbackTokens"]["remove"])
+        album = self.yt_brand.get_album(sample_album)
+        self.assertFalse(album["tracks"][0]["inLibrary"])
         self.assertTrue(response["feedbackResponses"][0]["isProcessed"])
 
     def test_rate_playlist(self):

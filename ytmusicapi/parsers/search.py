@@ -5,7 +5,7 @@ from ._utils import *
 def get_search_result_type(result_type_local, result_types_local):
     if not result_type_local:
         return None
-    result_types = ['artist', 'playlist', 'song', 'video', 'station', 'profile']
+    result_types = ['artist', 'playlist', 'song', 'video', 'station', 'profile', 'podcast', 'episode']
     result_type_local = result_type_local.lower()
     # default to album since it's labeled with multiple values ('Single', 'EP', etc.)
     if result_type_local not in result_types_local:
@@ -87,6 +87,7 @@ def parse_search_result(data, search_result_types, result_type, category):
         if 'menu' in data:
             toggle_menu = find_object_by_key(nav(data, MENU_ITEMS), TOGGLE_MENU)
             if toggle_menu:
+                search_result['inLibrary'] = parse_song_library_status(toggle_menu)
                 search_result['feedbackTokens'] = parse_song_menu_tokens(toggle_menu)
 
     elif result_type == 'upload':
@@ -206,7 +207,9 @@ def _get_param2(filter):
         'albums': 'IY',
         'artists': 'Ig',
         'playlists': 'Io',
-        'profiles': 'JY'
+        'profiles': 'JY',
+        'podcasts': 'JQ',
+        'episodes': 'JI'
     }
     return filter_params[filter]
 
