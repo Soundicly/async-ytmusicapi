@@ -341,7 +341,7 @@ class BrowsingMixin:
         """
         params = {"list": audioPlaylistId}
         response = await self._send_get_request(YTM_DOMAIN + "/playlist", params)
-        matches = re.search(r"\"MPRE.+?\"", response.text.encode("utf8").decode("unicode_escape"))
+        matches = re.search(r"\"MPRE.+?\"", response.encode("utf8").decode("unicode_escape"))
         browse_id = None
         if matches:
             browse_id = matches.group().strip('"')
@@ -749,7 +749,7 @@ class BrowsingMixin:
         if url is None:
             url = await self.get_basejs_url()
         response = await self._send_get_request(url=url)
-        match = re.search(r"signatureTimestamp[:=](\d+)", response.text)
+        match = re.search(r"signatureTimestamp[:=](\d+)", response)
         if match is None:
             raise Exception("Unable to identify the signatureTimestamp.")
 
